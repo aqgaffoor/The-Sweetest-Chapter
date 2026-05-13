@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Order - The Sweetest Chapter</title>
+    <meta name="description" content="Ready to start your sweetest chapter? Place an order for custom cakes and treats.">
+    <link rel="stylesheet" href="STYLE.CSS">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="nav-logo">The Sweetest Chapter</a>
+            <div class="nav-menu" id="nav-menu">
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="gallery.html">Gallery</a></li>
+                    <li><a href="menu.html">Menu</a></li>
+                    <li><a href="order.html">How to Order</a></li>
+                </ul>
+            </div>
+            <div class="nav-toggle" id="nav-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <section class="page-section bg-alt" style="padding-top: 150px;">
+            <div class="container">
+                <div class="form-container reveal">
+                    <div class="section-title">
+                        <h2>Place an Order</h2>
+                        <p>Ready to start your sweetest chapter? Please fill out the form below. We'll get back to you within 24 hours to confirm the details and price.</p>
+                    </div>
+                    
+                    <p style="text-align: center; margin-bottom: 2rem;"><strong>Note:</strong> We recommend booking at least 1-2 weeks in advance for custom cakes.</p>
+
+                    <!-- Replace the action URL with your Formspree endpoint if using GitHub Pages -->
+                    <form action="https://formspree.io/f/YOUR_ID_HERE" method="POST">
+                    
+                        <div class="form-group">
+                            <label for="customer-name">Your Name</label>
+                            <input type="text" id="customer-name" name="name" required placeholder="John Doe">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="email">Your Email</label>
+                            <input type="email" id="email" name="email" required placeholder="john@example.com">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="phone">Your Phone Number</label>
+                            <input type="tel" id="phone" name="phone" required placeholder="+1 234 567 890">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="order-details">What would you like to order?</label>
+                            <textarea id="order-details" name="message" rows="6" placeholder="e.g., A red velvet cake for a 21st birthday..."></textarea>
+                        </div>
+                        
+                        <div style="text-align: center;">
+                            <button type="submit" class="cta-button">Send Order Request</button>
+                        </div>
+                    
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 The Sweetest Chapter. All rights reserved.</p>
+            <p>
+                Follow us on 
+                <a href="https://www.instagram.com/thesweetest_chapter/" target="_blank">Instagram</a>
+            </p>
+        </div>
+    </footer>
+
+    <script src="main.js"></script>
+</body>
+</html>
