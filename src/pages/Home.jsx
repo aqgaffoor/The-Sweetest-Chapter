@@ -25,7 +25,7 @@ const Home = () => {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1 }}
           >
-            <img src="/logo.png" alt="The Sweetest Chapter Logo" />
+            <img src="./logo.png" alt="The Sweetest Chapter Logo" />
           </motion.div>
         </div>
       </header>
@@ -41,7 +41,7 @@ const Home = () => {
               initial={{ opacity: 0, x: -50 }}
               transition={{ duration: 0.8 }}
             >
-              <img src="/images/homepagepic1.jpg" alt="A beautiful custom cake" className="rounded-img" />
+              <img src="./images/homepagepic1.jpg" alt="A beautiful custom cake" className="rounded-img" />
             </motion.div>
             <motion.div 
               whileInView={{ opacity: 1, x: 0 }}

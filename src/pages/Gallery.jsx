@@ -8,7 +8,7 @@ const Gallery = () => {
   const [selectedImg, setSelectedImg] = useState(null)
 
   // Local fallback images
-  const localImages = Array.from({ length: 26 }, (_, i) => `/images/cake${i + 1}.jpg`)
+  const localImages = Array.from({ length: 26 }, (_, i) => `./images/cake${i + 1}.jpg`)
 
   useEffect(() => {
     fetchGallery()
