@@ -1,109 +1,97 @@
-import { Link } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import { useState, useEffect, useCallback } from 'react'
+
+const NAV_LINKS = [
+  { to: '/',        label: 'Home'        },
+  { to: '/gallery', label: 'Gallery'     },
+  { to: '/menu',    label: 'Menu'        },
+  { to: '/order',   label: 'How to Order'},
+]
 
 const Navbar = () => {
-  const [isScrolled, setIsScrolled] = useState(false)
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isScrolled, setIsScrolled]   = useState(false)
+  const [isMenuOpen, setIsMenuOpen]   = useState(false)
+  const location                      = useLocation()
 
+  // Scroll listener — collapse padding when scrolled
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50)
-    }
-    window.addEventListener('scroll', handleScroll)
+    const handleScroll = () => setIsScrolled(window.scrollY > 50)
+    window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  // Close menu on route change
+  useEffect(() => {
+    setIsMenuOpen(false)
+  }, [location.pathname])
+
+  // Close menu with ESC key
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === 'Escape') setIsMenuOpen(false)
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [])
+
+  // Prevent body scroll when menu is open
+  useEffect(() => {
+    document.body.style.overflow = isMenuOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [isMenuOpen])
+
+  const closeMenu = useCallback(() => setIsMenuOpen(false), [])
+  const toggleMenu = useCallback(() => setIsMenuOpen((prev) => !prev), [])
+
   return (
-    <nav className={`navbar ${isScrolled ? 'scrolled' : ''}`}>
-      <div className="container nav-container">
-        <Link to="/" className="nav-logo">The Sweetest Chapter</Link>
-        
-        <div className={`nav-menu ${isMenuOpen ? 'active' : ''}`}>
-          <ul>
-            <li><Link to="/" onClick={() => setIsMenuOpen(false)}>Home</Link></li>
-            <li><Link to="/gallery" onClick={() => setIsMenuOpen(false)}>Gallery</Link></li>
-            <li><Link to="/menu" onClick={() => setIsMenuOpen(false)}>Menu</Link></li>
-            <li><Link to="/order" onClick={() => setIsMenuOpen(false)}>How to Order</Link></li>
-          </ul>
+    <>
+      <nav className={`navbar${isScrolled ? ' scrolled' : ''}`} aria-label="Main navigation">
+        <div className="container nav-container">
+          <Link to="/" className="nav-logo" onClick={closeMenu}>
+            The Sweetest Chapter
+          </Link>
+
+          <div
+            className={`nav-menu${isMenuOpen ? ' active' : ''}`}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Site navigation"
+          >
+            <ul>
+              {NAV_LINKS.map(({ to, label }) => (
+                <li key={to}>
+                  <Link
+                    to={to}
+                    className={location.pathname === to ? 'active' : ''}
+                    onClick={closeMenu}
+                  >
+                    {label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <button
+            className={`nav-toggle${isMenuOpen ? ' active' : ''}`}
+            onClick={toggleMenu}
+            aria-expanded={isMenuOpen}
+            aria-label={isMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
         </div>
+      </nav>
 
-        <div className={`nav-toggle ${isMenuOpen ? 'active' : ''}`} onClick={() => setIsMenuOpen(!isMenuOpen)}>
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
-      </div>
-
-      <style jsx>{`
-        .navbar {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          z-index: 1000;
-          padding: 1.5rem 0;
-          background: rgba(255, 255, 255, 0.8);
-          backdrop-filter: blur(15px);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-          transition: all 0.4s ease;
-        }
-        .navbar.scrolled {
-          padding: 1rem 0;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        .nav-container {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-        .nav-logo {
-          font-family: var(--font-heading);
-          font-size: 1.8rem;
-          font-weight: 700;
-          color: var(--clr-pink);
-        }
-        .nav-menu ul {
-          display: flex;
-          gap: 2.5rem;
-        }
-        .nav-menu a {
-          font-weight: 500;
-          color: var(--clr-brown);
-          transition: color 0.3s ease;
-        }
-        .nav-menu a:hover {
-          color: var(--clr-pink);
-        }
-        .nav-toggle {
-          display: none;
-          flex-direction: column;
-          gap: 6px;
-          cursor: pointer;
-        }
-        .nav-toggle span {
-          width: 30px;
-          height: 2px;
-          background-color: var(--clr-brown);
-          transition: all 0.3s ease;
-        }
-
-        @media (max-width: 768px) {
-          .nav-toggle { display: flex; }
-          .nav-menu {
-            position: fixed;
-            top: 0;
-            right: -100%;
-            width: 80%;
-            height: 100vh;
-            background: white;
-            padding: 6rem 2rem;
-            transition: 0.4s ease;
-          }
-          .nav-menu.active { right: 0; }
-          .nav-menu ul { flex-direction: column; gap: 2rem; }
-        }
-      `}</style>
-    </nav>
+      {/* Backdrop — clicking it closes the menu */}
+      <div
+        className={`nav-backdrop${isMenuOpen ? ' active' : ''}`}
+        onClick={closeMenu}
+        aria-hidden="true"
+      />
+    </>
   )
 }
 

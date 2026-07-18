@@ -1,24 +1,28 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
-import { motion } from 'framer-motion'
 
 const Admin = () => {
-  const [user, setUser] = useState(null)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [uploading, setUploading] = useState(false)
+  const [user, setUser]             = useState(null)
+  const [email, setEmail]           = useState('')
+  const [password, setPassword]     = useState('')
+  const [loading, setLoading]       = useState(false)
+  const [uploading, setUploading]   = useState(false)
   const [galleryItems, setGalleryItems] = useState([])
 
+  // Fix: getSession() returns a Promise — must be awaited
   useEffect(() => {
-    const session = supabase.auth.getSession()
-    setUser(session?.user || null)
+    const init = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      setUser(session?.user ?? null)
+      if (session?.user) fetchGallery()
+    }
+
+    init()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null)
+      setUser(session?.user ?? null)
+      if (session?.user) fetchGallery()
     })
-
-    if (session?.user) fetchGallery()
 
     return () => subscription.unsubscribe()
   }, [])
@@ -34,36 +38,41 @@ const Admin = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut()
     setUser(null)
+    setGalleryItems([])
   }
 
   const fetchGallery = async () => {
-    const { data } = await supabase.from('gallery').select('*').order('created_at', { ascending: false })
+    const { data } = await supabase
+      .from('gallery')
+      .select('*')
+      .order('created_at', { ascending: false })
     setGalleryItems(data || [])
   }
 
   const handleFileUpload = async (e) => {
+    if (!e.target.files || e.target.files.length === 0) return
+
+    const file    = e.target.files[0]
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
+    const filePath = `gallery/${fileName}`
+
+    setUploading(true)
+
     try {
-      setUploading(true)
-      if (!e.target.files || e.target.files.length === 0) return
-
-      const file = e.target.files[0]
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${Math.random()}.${fileExt}`
-      const filePath = `gallery/${fileName}`
-
       // 1. Upload to Storage
-      let { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('images')
         .upload(filePath, file)
 
       if (uploadError) throw uploadError
 
-      // 2. Get Public URL
+      // 2. Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('images')
         .getPublicUrl(filePath)
 
-      // 3. Save to Database
+      // 3. Save record to database
       const { error: dbError } = await supabase
         .from('gallery')
         .insert([{ image_url: publicUrl }])
@@ -72,44 +81,72 @@ const Admin = () => {
 
       alert('Image uploaded successfully!')
       fetchGallery()
-    } catch (error) {
-      alert(error.message)
+    } catch (err) {
+      alert(err.message)
     } finally {
       setUploading(false)
+      // Reset file input so the same file can be re-uploaded if needed
+      e.target.value = ''
     }
   }
 
   const deleteImage = async (id, url) => {
-    if (!confirm('Are you sure you want to delete this image?')) return
-    
-    // Extract file path from URL
-    const path = url.split('/images/')[1]
-    
-    await supabase.storage.from('images').remove([path])
-    await supabase.from('gallery').delete().eq('id', id)
-    fetchGallery()
+    if (!confirm('Delete this image? This cannot be undone.')) return
+
+    try {
+      // Extract storage path from full URL (everything after /images/)
+      const path = url.split('/images/')[1]
+      await supabase.storage.from('images').remove([path])
+      await supabase.from('gallery').delete().eq('id', id)
+      fetchGallery()
+    } catch (err) {
+      alert(`Could not delete image: ${err.message}`)
+    }
   }
 
+  /* ── Login screen ── */
   if (!user) {
     return (
-      <div className="admin-login page-section" style={{ paddingTop: '150px' }}>
+      <div className="admin-login page-section">
         <div className="container">
-          <div className="form-container" style={{ maxWidth: '400px' }}>
+          <div className="form-container">
             <div className="section-title">
               <h2>Bakery Login</h2>
               <p>Manage your site content</p>
             </div>
+
             <form onSubmit={handleLogin}>
               <div className="form-group">
-                <label>Email</label>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <label htmlFor="admin-email">Email</label>
+                <input
+                  id="admin-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="username"
+                />
               </div>
+
               <div className="form-group">
-                <label>Password</label>
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <label htmlFor="admin-password">Password</label>
+                <input
+                  id="admin-password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                />
               </div>
-              <button type="submit" className="cta-button" style={{ width: '100%' }} disabled={loading}>
-                {loading ? 'Logging in...' : 'Login'}
+
+              <button
+                type="submit"
+                className="cta-button"
+                style={{ width: '100%' }}
+                disabled={loading}
+              >
+                {loading ? 'Logging in…' : 'Login'}
               </button>
             </form>
           </div>
@@ -118,86 +155,56 @@ const Admin = () => {
     )
   }
 
+  /* ── Dashboard ── */
   return (
-    <div className="admin-dashboard page-section" style={{ paddingTop: '150px' }}>
+    <div
+      className="admin-dashboard page-section"
+      style={{ paddingTop: 'calc(var(--nav-height) + 2rem)' }}
+    >
       <div className="container">
         <div className="dashboard-header">
-          <h2>Welcome, Bakery Owner</h2>
-          <button onClick={handleLogout} className="cta-button outline">Logout</button>
+          <h2>Welcome, Bakery Owner ✨</h2>
+          <button onClick={handleLogout} className="cta-button outline">
+            Logout
+          </button>
         </div>
 
-        <div className="dashboard-section reveal active">
-          <h3>Manage Gallery</h3>
-          <div className="upload-box">
-            <p>Add a new masterpiece to your gallery</p>
-            <input 
-              type="file" 
-              accept="image/*" 
-              onChange={handleFileUpload} 
-              disabled={uploading}
-              id="file-upload"
-              hidden
-            />
-            <label htmlFor="file-upload" className="cta-button">
-              {uploading ? 'Uploading...' : 'Upload New Photo'}
-            </label>
-          </div>
+        <div className="upload-box">
+          <p>Add a new masterpiece to your gallery</p>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileUpload}
+            disabled={uploading}
+            id="file-upload"
+            hidden
+          />
+          <label htmlFor="file-upload" className="cta-button" aria-busy={uploading}>
+            {uploading ? 'Uploading…' : 'Upload New Photo'}
+          </label>
+        </div>
 
+        {galleryItems.length > 0 ? (
           <div className="admin-gallery-grid">
-            {galleryItems.map(item => (
+            {galleryItems.map((item) => (
               <div key={item.id} className="admin-gallery-item">
-                <img src={item.image_url} alt="Gallery item" />
-                <button onClick={() => deleteImage(item.id, item.image_url)} className="delete-btn">Delete</button>
+                <img src={item.image_url} alt="Gallery item" loading="lazy" />
+                <button
+                  className="delete-btn"
+                  onClick={() => deleteImage(item.id, item.image_url)}
+                  aria-label="Delete this image"
+                >
+                  Delete
+                </button>
               </div>
             ))}
           </div>
-        </div>
+        ) : (
+          <p style={{ textAlign: 'center', color: 'var(--clr-brown-pale)', padding: '2rem 0' }}>
+            No images in gallery yet. Upload one above!
+          </p>
+        )}
       </div>
-
-      <style jsx>{`
-        .dashboard-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 3rem;
-        }
-        .upload-box {
-          background: white;
-          padding: 3rem;
-          border-radius: var(--radius-md);
-          text-align: center;
-          margin-bottom: 3rem;
-          border: 2px dashed var(--clr-pink-light);
-        }
-        .admin-gallery-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-          gap: 1rem;
-        }
-        .admin-gallery-item {
-          position: relative;
-          aspect-ratio: 1;
-        }
-        .admin-gallery-item img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          border-radius: 8px;
-        }
-        .delete-btn {
-          position: absolute;
-          top: 5px;
-          right: 5px;
-          background: rgba(255, 0, 0, 0.7);
-          color: white;
-          border: none;
-          padding: 5px 10px;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 0.8rem;
-        }
-        .delete-btn:hover { background: red; }
-      `}</style>
     </div>
   )
 }
